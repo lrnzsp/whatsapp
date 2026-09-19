@@ -200,3 +200,25 @@ func TestDocumentFileName(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateMediaPath_ExtraAllowedDirs(t *testing.T) {
+	extra := t.TempDir()
+	other := t.TempDir()
+	// t.TempDir lives under the OS temp dir, which may itself be allowlisted
+	// (/tmp); only assert on paths that are not already allowed by default.
+	if validateMediaPath(filepath.Join(extra, "a.pdf")) == nil {
+		t.Skip("temp dir is already inside the default allowlist")
+	}
+
+	t.Setenv("MEDIA_ALLOWED_DIRS", extra+string(os.PathListSeparator)+"relative/ignored")
+
+	if err := validateMediaPath(filepath.Join(extra, "a.pdf")); err != nil {
+		t.Errorf("path inside MEDIA_ALLOWED_DIRS should be allowed, got %v", err)
+	}
+	if err := validateMediaPath(filepath.Join(other, "a.pdf")); err == nil {
+		t.Error("path outside MEDIA_ALLOWED_DIRS should still be rejected")
+	}
+	if err := validateMediaPath(extra + "-sibling/a.pdf"); err == nil {
+		t.Error("sibling sharing a name prefix should be rejected")
+	}
+}
