@@ -45,7 +45,7 @@ An extended Model Context Protocol (MCP) server for WhatsApp with a toolset-gate
 git clone https://github.com/felixisaac/whatsapp-mcp-extended
 cd whatsapp-mcp-extended
 
-docker network create n8n_n8n_traefik_network
+cp .env.example .env   # then set API_KEY (openssl rand -hex 32)
 docker-compose up -d
 
 # Scan QR code to authenticate

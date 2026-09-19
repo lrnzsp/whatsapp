@@ -19,9 +19,17 @@ services:
     volumes:
       - ./store:/app/whatsapp-bridge/store
     environment:
-      - TZ=UTC
+      - TZ=${TZ:-UTC}
       - API_KEY=${API_KEY:?API_KEY is required - see .env.example}
       - DISABLE_AUTH_CHECK=${DISABLE_AUTH_CHECK:-false}
+      # Optional settings documented in .env.example / README: pass them through
+      # so that setting them in .env actually reaches the bridge (empty = default)
+      - WHATSAPP_ALLOWLIST_JIDS=${WHATSAPP_ALLOWLIST_JIDS:-}
+      - WA_PRESENCE_MODE=${WA_PRESENCE_MODE:-}
+      - PRESENCE_LINGER_MIN=${PRESENCE_LINGER_MIN:-}
+      - PRESENCE_LINGER_MAX=${PRESENCE_LINGER_MAX:-}
+      - PRESENCE_PING_ENABLED=${PRESENCE_PING_ENABLED:-}
+      - PRESENCE_PING_INTERVAL=${PRESENCE_PING_INTERVAL:-}
       - API_BIND_HOST=0.0.0.0  # Docker: accept from internal network; external port is already bound to 127.0.0.1:8180
     healthcheck:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:8080/api/health"]
@@ -50,8 +58,8 @@ services:
     volumes:
       - ./store:/app/store
     environment:
-      - TZ=UTC
-      - DEBUG=true
+      - TZ=${TZ:-UTC}
+      - DEBUG=${DEBUG:-false}
       - MCP_TRANSPORT=streamable-http
       - HOST=0.0.0.0
       - PORT=8081
