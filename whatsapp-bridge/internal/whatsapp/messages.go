@@ -191,8 +191,6 @@ func (c *Client) SendMessage(messageStore *database.MessageStore, recipient stri
 		return bridgeTypes.SendResult{Success: false, Error: "Not connected to WhatsApp"}
 	}
 
-	c.GoOnlineBriefly()
-
 	// Create JID for recipient
 	var recipientJID types.JID
 	var err error
@@ -227,24 +225,12 @@ func (c *Client) SendMessage(messageStore *database.MessageStore, recipient stri
 		}
 	}
 
-	// Safety gate: Check WHATSAPP_ALLOWLIST_JIDS if configured
-	if c.cfg != nil && len(c.cfg.AllowlistJIDs) > 0 {
-		allowed := false
-		targetStr := recipientJID.String()
-		targetUser := recipientJID.User
-		for _, a := range c.cfg.AllowlistJIDs {
-			if strings.EqualFold(a, targetStr) || strings.EqualFold(a, targetUser) || strings.Contains(targetStr, a) {
-				allowed = true
-				break
-			}
-		}
-		if !allowed {
-			return bridgeTypes.SendResult{
-				Success: false,
-				Error:   fmt.Sprintf("recipient %s is blocked by WHATSAPP_ALLOWLIST_JIDS safety gate", recipient),
-			}
-		}
+	// Safety gate: WHATSAPP_ALLOWLIST_JIDS, if configured
+	if err := c.checkAllowlist(recipientJID); err != nil {
+		return bridgeTypes.SendResult{Success: false, Error: err.Error()}
 	}
+
+	c.GoOnlineBriefly()
 
 	msg := &waE2E.Message{}
 
@@ -453,12 +439,15 @@ func (c *Client) SendReaction(messageStore *database.MessageStore, chatJID, mess
 		return fmt.Errorf("not connected to WhatsApp")
 	}
 
-	c.GoOnlineBriefly()
-
 	chat, err := types.ParseJID(chatJID)
 	if err != nil {
 		return fmt.Errorf("invalid chat JID: %v", err)
 	}
+	if err := c.checkAllowlist(chat); err != nil {
+		return err
+	}
+
+	c.GoOnlineBriefly()
 
 	msgID := types.MessageID(messageID)
 
@@ -499,6 +488,9 @@ func (c *Client) EditMessage(chatJID, messageID, newContent string) error {
 	if err != nil {
 		return fmt.Errorf("invalid chat JID: %v", err)
 	}
+	if err := c.checkAllowlist(chat); err != nil {
+		return err
+	}
 
 	c.GoOnlineBriefly()
 
@@ -536,6 +528,9 @@ func (c *Client) DeleteMessage(chatJID, messageID, senderJID string) error {
 	chat, err := types.ParseJID(chatJID)
 	if err != nil {
 		return fmt.Errorf("invalid chat JID: %v", err)
+	}
+	if err := c.checkAllowlist(chat); err != nil {
+		return err
 	}
 
 	c.GoOnlineBriefly()
@@ -788,6 +783,9 @@ func (c *Client) CreatePoll(chatJID string, question string, options []string, m
 	chat, err := types.ParseJID(chatJID)
 	if err != nil {
 		return bridgeTypes.SendResult{Success: false, Error: fmt.Sprintf("invalid chat JID: %v", err)}, err
+	}
+	if err := c.checkAllowlist(chat); err != nil {
+		return bridgeTypes.SendResult{Success: false, Error: err.Error()}, err
 	}
 
 	c.GoOnlineBriefly()
