@@ -69,12 +69,22 @@ Add to your MCP config (`claude_desktop_config.json` or Cursor settings):
 
 ### Security & Safety Gate (Allowlist)
 
-To restrict outgoing message delivery to a specified set of allowed contacts or groups (useful for dev environments or enterprise privacy gates), set `WHATSAPP_ALLOWLIST_JIDS`:
+To restrict outgoing activity to a specified set of allowed contacts or groups (useful for dev environments or enterprise privacy gates), set `WHATSAPP_ALLOWLIST_JIDS`:
 
 ```bash
-# Allow sending only to specific phone numbers or group JIDs (comma-separated)
+# Allow only specific phone numbers or group JIDs (comma-separated)
 WHATSAPP_ALLOWLIST_JIDS=1234567890,9876543210@s.whatsapp.net,1203630123456789@g.us
 ```
+
+The gate covers everything that delivers or changes content in a chat: messages, files, voice notes, reactions, edits, deletes and polls. Entries are matched **exactly**, never by substring:
+
+| Entry | Matches |
+|-------|---------|
+| `1234567890` or `+1 234-567-890` | that phone number (or group id) |
+| `1234567890@s.whatsapp.net`, `1203630123456789@g.us` | that exact JID |
+| `*@g.us` | every group (explicit server wildcard) |
+
+A contact whose chat is stored under a LID (`...@lid`) is allowed when its phone number is listed, as long as the bridge knows the LID↔phone mapping. Unset or empty means no restriction.
 
 ## MCP Tools
 
