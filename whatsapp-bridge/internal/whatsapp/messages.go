@@ -105,6 +105,21 @@ var allowedMediaDirs = []string{
 	"/tmp",
 }
 
+// extraMediaDirs returns additional allowed media directories from the
+// MEDIA_ALLOWED_DIRS environment variable (absolute paths separated by the OS
+// path-list separator, ':' on Unix). It lets a bridge running outside Docker
+// send files from host directories without disabling the path check entirely.
+func extraMediaDirs() []string {
+	var dirs []string
+	for _, dir := range filepath.SplitList(os.Getenv("MEDIA_ALLOWED_DIRS")) {
+		dir = strings.TrimSpace(dir)
+		if dir != "" && filepath.IsAbs(dir) {
+			dirs = append(dirs, dir)
+		}
+	}
+	return dirs
+}
+
 // validateMediaPath checks if the path resolves to a location within an
 // allowed directory. It resolves symlinks before matching so a symlink planted
 // inside an allowed directory cannot redirect os.ReadFile to an arbitrary file,
@@ -141,7 +156,7 @@ func validateMediaPath(mediaPath string) error {
 	// Check if the resolved path is within an allowed directory, matching on
 	// path-segment boundaries rather than a raw string prefix.
 	sep := string(os.PathSeparator)
-	for _, allowedDir := range allowedMediaDirs {
+	for _, allowedDir := range append(append([]string{}, allowedMediaDirs...), extraMediaDirs()...) {
 		allowedAbs, err := filepath.Abs(allowedDir)
 		if err != nil {
 			continue
