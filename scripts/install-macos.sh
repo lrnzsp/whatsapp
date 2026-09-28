@@ -143,6 +143,24 @@ PLIST
     "$CLAUDE_BIN" mcp add --scope user "whatsapp-$name" -e "WHATSAPP_MCP_HOME=$WA_HOME" -- /bin/bash "$REPO/bin-run-mcp.sh" "$name" >/dev/null
     ok "registered MCP server 'whatsapp-$name' in Claude Code"
   fi
+  register_desktop "$name"
+}
+
+# Claude Desktop (and Cowork) read their own config file, not Claude Code's
+register_desktop() {  # $1 name
+  local cfg="$HOME/Library/Application Support/Claude/claude_desktop_config.json"
+  [ -d "$(dirname "$cfg")" ] || return 0   # Claude Desktop not installed
+  NAME="$1" CFG="$cfg" REPO="$REPO" WA_HOME="$WA_HOME" python3 - <<'PY'
+import json, os, shutil, time
+p, name = os.environ['CFG'], os.environ['NAME']
+d = json.load(open(p)) if os.path.exists(p) else {}
+if os.path.exists(p): shutil.copy(p, p + '.bak-' + time.strftime('%Y%m%d-%H%M%S'))
+d.setdefault('mcpServers', {})['whatsapp-' + name] = {
+    'command': '/bin/bash', 'args': [os.environ['REPO'] + '/bin-run-mcp.sh', name],
+    'env': {'WHATSAPP_MCP_HOME': os.environ['WA_HOME']}}
+json.dump(d, open(p, 'w'), indent=2)
+PY
+  ok "registered 'whatsapp-$name' in Claude Desktop (restart the app to see it)"
 }
 
 pair_account() {  # $1 name
@@ -204,6 +222,5 @@ cat <<TXT
    In Claude Code the tools appear in NEW sessions as: $(printf 'whatsapp-%s ' "${ACCOUNTS[@]}")
    Re-pair:      $REPO/scripts/install-macos.sh --pair <account>
    Update:       cd "$REPO" && git pull && scripts/build-native-macos.sh
-   Claude Desktop: add to claude_desktop_config.json, for each account:
-     "whatsapp-<account>": {"command": "/bin/bash", "args": ["$REPO/bin-run-mcp.sh", "<account>"]}
+   Claude Desktop / Cowork: quit and reopen the app to load the new servers.
 TXT
