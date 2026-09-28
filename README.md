@@ -52,6 +52,29 @@ docker-compose up -d
 docker-compose logs -f whatsapp-bridge
 ```
 
+### macOS, no Docker (native install)
+
+One command builds the Go bridge as a native binary, installs it as a login service
+(launchd), and registers the MCP server in Claude Code. One *account* = one WhatsApp
+number; pass several names to run several numbers side by side (e.g. personal + Business):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lrnzsp/whatsapp/local/scripts/install-macos.sh | bash -s -- personal business
+```
+
+The script asks for each phone number and shows the 8-digit pairing code to enter on
+the phone. Each account lives in `~/.whatsapp-mcp/<account>/` (its `.env` with API key,
+port and allowlist, and its `store/` with the message database) and appears in Claude Code
+as `whatsapp-<account>`. Requirements: Xcode Command Line Tools and Claude Code; `uv` and
+the Go toolchain are fetched automatically.
+
+| Task | Command |
+|------|---------|
+| Re-pair an account | `~/whatsapp-mcp/scripts/install-macos.sh --pair <account>` |
+| Update | `cd ~/whatsapp-mcp && git pull && scripts/build-native-macos.sh` |
+| Logs | `~/Library/Logs/whatsapp-bridge-<account>.log` |
+| Claude Desktop | add `{"command": "/bin/bash", "args": ["<repo>/bin-run-mcp.sh", "<account>"]}` to `claude_desktop_config.json` |
+
 ### Claude Desktop / Cursor Integration
 
 Add to your MCP config (`claude_desktop_config.json` or Cursor settings):

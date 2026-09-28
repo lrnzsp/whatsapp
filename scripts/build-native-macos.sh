@@ -32,6 +32,11 @@ CGO_ENABLED=1 go build -o whatsapp-bridge.new .
 mv -f whatsapp-bridge.new whatsapp-bridge
 echo "Built $(pwd)/whatsapp-bridge"
 
-if launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1; then
-  launchctl kickstart -k "gui/$(id -u)/$LABEL" && echo "Restarted $LABEL"
-fi
+# Restart whichever bridge services are installed (legacy single label + per-account ones).
+# NO_RESTART=1 skips this (the installer restarts services itself).
+[ -n "${NO_RESTART:-}" ] && exit 0
+for svc in "$LABEL" $(launchctl list 2>/dev/null | awk '$3 ~ /^com\.whatsapp-mcp\./ {print $3}'); do
+  if launchctl print "gui/$(id -u)/$svc" >/dev/null 2>&1; then
+    launchctl kickstart -k "gui/$(id -u)/$svc" && echo "Restarted $svc"
+  fi
+done
